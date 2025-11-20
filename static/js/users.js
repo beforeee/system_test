@@ -15,29 +15,30 @@ function getRoleName(role) {
 
 // 获取操作按钮（根据权限）
 function getActionButtons(user) {
-    // 从页面获取权限信息（通过隐藏元素或全局变量）
     const canEdit = window.userPermissions?.canEdit || false;
     const canDelete = window.userPermissions?.canDelete || false;
-    const currentUserRole = window.userPermissions?.userRole || 'user';
+    const canDisable = window.userPermissions?.canDisable || false;
+    const currentUserId = window.userPermissions?.currentUserId || null;
     
     let buttons = '';
     
-    // 只有管理员和超级管理员可以编辑
     if (canEdit) {
         buttons += `<button class="btn btn-primary btn-sm" onclick="editUser(${user.id})">编辑</button>`;
     }
     
-    // 只有超级管理员可以删除
-    if (canDelete) {
+    if (canDisable && user.status === 1 && user.id !== currentUserId) {
+        buttons += `<button class="btn btn-warning btn-sm" onclick="disableUser(${user.id})">停用</button>`;
+    }
+    
+    if (canDelete && user.id !== currentUserId) {
         buttons += `<button class="btn btn-danger btn-sm" onclick="deleteUser(${user.id})">删除</button>`;
     }
     
-    // 如果没有任何权限，显示"查看"
-    if (!canEdit && !canDelete) {
-        buttons += `<button class="btn btn-secondary btn-sm" onclick="viewUser(${user.id})">查看</button>`;
+    if (!buttons) {
+        buttons = `<button class="btn btn-secondary btn-sm" onclick="viewUser(${user.id})">查看</button>`;
     }
     
-    return buttons || '<span class="text-muted">无权限</span>';
+    return buttons;
 }
 
 // 查看用户详情（只读）
@@ -350,6 +351,24 @@ async function deleteUser(userId) {
         }
     } catch (error) {
         showToast('删除失败: ' + error.message, 'error');
+    }
+}
+
+async function disableUser(userId) {
+    if (!confirm('确定要停用这个用户吗？停用后将无法登录系统。')) {
+        return;
+    }
+    
+    try {
+        const response = await apiPost(`/api/users/${userId}/disable`, {});
+        if (response.success) {
+            showToast('用户已停用', 'success');
+            loadUsers();
+        } else {
+            showToast('停用失败: ' + response.message, 'error');
+        }
+    } catch (error) {
+        showToast('停用失败: ' + error.message, 'error');
     }
 }
 

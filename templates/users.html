@@ -158,7 +158,9 @@
     window.userPermissions = {
         canEdit: {{ 'true' if can_edit else 'false' }},
         canDelete: {{ 'true' if can_delete else 'false' }},
-        userRole: '{{ user_role }}'
+        canDisable: {{ 'true' if can_disable else 'false' }},
+        userRole: '{{ user_role }}',
+        currentUserId: {{ current_user_id|default('null', true) }}
     };
 </script>
 {% endblock %}

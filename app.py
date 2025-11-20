@@ -130,9 +130,12 @@ def users_page():
     user_role = session.get('role', 'user')
     can_edit_user = user_role in ['super_admin', 'admin']
     can_delete_user = user_role == 'super_admin'
+    can_disable_user = user_role in ['super_admin', 'admin']
     return render_template('users.html', 
                          can_edit=can_edit_user, 
                          can_delete=can_delete_user,
+                         can_disable=can_disable_user,
+                         current_user_id=session.get('user_id'),
                          user_role=user_role)
 
 
@@ -468,6 +471,57 @@ def delete_user(user_id):
         return jsonify({
             'success': False,
             'message': f'删除用户失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/users/<int:user_id>/disable', methods=['POST'])
+@permission_required('admin')
+def disable_user(user_id):
+    """停用用户（设置为禁用状态）"""
+    try:
+        user = User.get_by_id(user_id)
+        if not user:
+            return jsonify({
+                'success': False,
+                'message': '用户不存在'
+            }), 404
+        
+        current_user = User.get_by_id(session.get('user_id'))
+        user_role = session.get('role', 'user')
+        
+        # 管理员只能停用本部门用户
+        if user_role == 'admin':
+            if not current_user or not current_user.department:
+                return jsonify({
+                    'success': False,
+                    'message': '您还没有被分配部门，无法执行此操作'
+                }), 403
+            if user.department != current_user.department:
+                return jsonify({
+                    'success': False,
+                    'message': '您只能停用本部门的用户'
+                }), 403
+        
+        if user.status == 0:
+            return jsonify({
+                'success': False,
+                'message': '该用户已是禁用状态'
+            }), 400
+        
+        # 设置状态为禁用
+        user.status = 0
+        user.password = None  # 避免更新密码字段
+        user.save()
+        
+        return jsonify({
+            'success': True,
+            'message': '用户已停用'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'停用用户失败: {str(e)}'
         }), 500
 
 
