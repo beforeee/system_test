@@ -218,10 +218,9 @@ class User:
         }
     
     def delete(self):
-        """删除用户（软删除，更新状态为禁用）"""
-        sql = "UPDATE users SET status=0 WHERE id=%s"
+        """删除用户（彻底删除，从数据库中删除记录）"""
+        sql = "DELETE FROM users WHERE id=%s"
         db.execute_update(sql, (self.id,))
-        self.status = 0
     
     @staticmethod
     def _from_dict(data):

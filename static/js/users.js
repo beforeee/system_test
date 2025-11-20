@@ -337,14 +337,14 @@ async function editUser(userId, readOnly = false) {
 
 // 删除用户
 async function deleteUser(userId) {
-    if (!confirm('确定要删除这个用户吗？')) {
+    if (!confirm('确定要彻底删除这个用户吗？此操作不可恢复！')) {
         return;
     }
     
     try {
         const response = await apiDelete(`/api/users/${userId}`);
         if (response.success) {
-            showToast('用户已删除', 'success');
+            showToast('用户已彻底删除', 'success');
             loadUsers();
         } else {
             showToast('删除失败: ' + response.message, 'error');

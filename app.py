@@ -156,7 +156,7 @@ def api_index():
             'GET /api/users/<id>': '获取用户详情',
             'POST /api/users': '创建用户',
             'PUT /api/users/<id>': '更新用户',
-            'DELETE /api/users/<id>': '删除用户（软删除）',
+            'DELETE /api/users/<id>': '删除用户（彻底删除，仅超级管理员）',
             'POST /api/users/login': '用户登录',
             'GET /api/users/search': '搜索用户'
         }
@@ -451,7 +451,7 @@ def update_user(user_id):
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
 @permission_required('super_admin')
 def delete_user(user_id):
-    """删除用户（软删除）"""
+    """删除用户（彻底删除，仅超级管理员可用）"""
     try:
         user = User.get_by_id(user_id)
         if not user:
@@ -464,7 +464,7 @@ def delete_user(user_id):
         
         return jsonify({
             'success': True,
-            'message': '用户已删除'
+            'message': '用户已彻底删除'
         })
         
     except Exception as e:
