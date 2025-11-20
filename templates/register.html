@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - 薪酬计算管理系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 200px);
+    padding: 2rem;
+}
+
+.login-box {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    padding: 3rem;
+    width: 100%;
+    max-width: 500px;
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.login-header h2 {
+    color: #333;
+    margin-bottom: 0.5rem;
+    font-size: 1.75rem;
+}
+
+.login-header .subtitle {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.btn-block {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.1rem;
+    margin-top: 1rem;
+}
+
+.error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    border: 1px solid #f5c6cb;
+}
+
+.form-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #eee;
+}
+
+.form-footer a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.form-footer a:hover {
+    text-decoration: underline;
+}
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1>薪酬计算管理系统</h1>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="login-container">
+                <div class="login-box">
+                    <div class="login-header">
+                        <h2>注册新账户</h2>
+                        <p class="subtitle">创建您的账户</p>
+                    </div>
+                    
+                    <form id="registerForm" onsubmit="handleRegister(event)">
+                        <div class="form-group">
+                            <label for="username">用户名 *</label>
+                            <input type="text" id="username" class="input" placeholder="请输入用户名" required autofocus>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="password">密码 *</label>
+                            <input type="password" id="password" class="input" placeholder="请输入密码" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="confirmPassword">确认密码 *</label>
+                            <input type="password" id="confirmPassword" class="input" placeholder="请再次输入密码" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="realName">真实姓名 *</label>
+                            <input type="text" id="realName" class="input" placeholder="请输入真实姓名" required>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="email">邮箱</label>
+                                <input type="email" id="email" class="input" placeholder="请输入邮箱（可选）">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="phone">手机号</label>
+                                <input type="tel" id="phone" class="input" placeholder="请输入手机号（可选）">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group" style="background-color: #f8f9fa; padding: 1rem; border-radius: 4px; margin-top: 1rem;">
+                            <p style="color: #666; font-size: 0.875rem; margin: 0;">
+                                <strong>提示：</strong>注册后，您的部门、职位、工号等信息需要由管理员或超级管理员后续添加。注册成功后，您将作为普通用户登录系统。
+                            </p>
+                        </div>
+                        
+                        <div id="registerError" class="error-message" style="display: none;"></div>
+                        
+                        <button type="submit" class="btn btn-primary btn-block" id="registerBtn">
+                            注册
+                        </button>
+                        
+                        <div class="form-footer">
+                            <p>已有账户？<a href="{{ url_for('login_page') }}">立即登录</a></p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 薪酬计算管理系统. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+async function handleRegister(event) {
+    event.preventDefault();
+    
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    const errorDiv = document.getElementById('registerError');
+    const registerBtn = document.getElementById('registerBtn');
+    
+    // 验证密码是否一致
+    if (password !== confirmPassword) {
+        errorDiv.textContent = '两次输入的密码不一致';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    // 验证密码长度
+    if (password.length < 6) {
+        errorDiv.textContent = '密码长度至少为6位';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    // 隐藏错误信息
+    errorDiv.style.display = 'none';
+    registerBtn.disabled = true;
+    registerBtn.textContent = '注册中...';
+    
+    const formData = {
+        username: document.getElementById('username').value,
+        password: password,
+        real_name: document.getElementById('realName').value,
+        email: document.getElementById('email').value || null,
+        phone: document.getElementById('phone').value || null
+        // 不发送 department, position, employee_id，这些由管理员后续添加
+        // 注册用户默认为普通用户（role='user'），状态为启用
+    };
+    
+    try {
+        const response = await apiPost('/api/users/register', formData);
+        
+        if (response.success) {
+            showToast('注册成功！正在跳转到登录页面...', 'success');
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 1500);
+        } else {
+            throw new Error(response.message || '注册失败');
+        }
+    } catch (error) {
+        errorDiv.textContent = error.message || '注册失败，请检查输入信息';
+        errorDiv.style.display = 'block';
+        registerBtn.disabled = false;
+        registerBtn.textContent = '注册';
+    }
+}
+    </script>
+</body>
+</html>

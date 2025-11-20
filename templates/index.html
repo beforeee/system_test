@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - 薪酬计算管理系统{% endblock %}
+
+{% block content %}
+<div class="welcome-section">
+    <h2>欢迎使用薪酬计算管理系统</h2>
+    <p class="subtitle">系统版本: 1.0.0</p>
+    
+    <div class="feature-cards">
+        <div class="card">
+            <div class="card-icon">👥</div>
+            <h3>用户管理中心</h3>
+            <p>管理员工信息、权限和角色</p>
+            <a href="{{ url_for('users_page') }}" class="btn btn-primary">进入用户管理</a>
+        </div>
+        
+        <div class="card">
+            <div class="card-icon">💰</div>
+            <h3>薪酬管理</h3>
+            <p>计算和管理员工薪酬（开发中）</p>
+            <button class="btn btn-secondary" disabled>即将推出</button>
+        </div>
+        
+        <div class="card">
+            <div class="card-icon">📊</div>
+            <h3>数据统计</h3>
+            <p>查看系统数据统计（开发中）</p>
+            <button class="btn btn-secondary" disabled>即将推出</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

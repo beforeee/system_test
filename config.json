@@ -1,0 +1,15 @@
+{
+  "database": {
+    "host": "49.232.75.178",
+    "port": 3306,
+    "username": "admin",
+    "password": "wlshyph!2017",
+    "database": "salary_management",
+    "charset": "utf8mb4",
+    "connection_timeout": 30
+  },
+  "app": {
+    "name": "配置中心",
+    "version": "1.0.0"
+  }
+}

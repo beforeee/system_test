@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 薪酬计算管理系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 200px);
+    padding: 2rem;
+}
+
+.login-box {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    padding: 3rem;
+    width: 100%;
+    max-width: 400px;
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.login-header h2 {
+    color: #333;
+    margin-bottom: 0.5rem;
+    font-size: 1.75rem;
+}
+
+.login-header .subtitle {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.btn-block {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.1rem;
+    margin-top: 1rem;
+}
+
+.error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    border: 1px solid #f5c6cb;
+}
+
+.login-footer {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #eee;
+    color: #999;
+    font-size: 0.875rem;
+}
+
+.form-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #eee;
+}
+
+.form-footer a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.form-footer a:hover {
+    text-decoration: underline;
+}
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1>薪酬计算管理系统</h1>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="login-container">
+                <div class="login-box">
+                    <div class="login-header">
+                        <h2>薪酬计算管理系统</h2>
+                        <p class="subtitle">请登录您的账户</p>
+                    </div>
+                    
+                    <form id="loginForm" onsubmit="handleLogin(event)">
+                        <div class="form-group">
+                            <label for="username">用户名</label>
+                            <input type="text" id="username" class="input" placeholder="请输入用户名" required autofocus>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="password">密码</label>
+                            <input type="password" id="password" class="input" placeholder="请输入密码" required>
+                        </div>
+                        
+                        <div id="loginError" class="error-message" style="display: none;"></div>
+                        
+                        <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
+                            登录
+                        </button>
+                        
+                        <div class="form-footer">
+                            <p>还没有账户？<a href="{{ url_for('register_page') }}">立即注册</a></p>
+                        </div>
+                    </form>
+                    
+                    <div class="login-footer">
+                        <p>© 2024 薪酬计算管理系统</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 薪酬计算管理系统. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+async function handleLogin(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const errorDiv = document.getElementById('loginError');
+    const loginBtn = document.getElementById('loginBtn');
+    
+    // 隐藏错误信息
+    errorDiv.style.display = 'none';
+    loginBtn.disabled = true;
+    loginBtn.textContent = '登录中...';
+    
+    try {
+        const response = await apiPost('/api/users/login', {
+            username: username,
+            password: password
+        });
+        
+        if (response.success) {
+            // 登录成功，跳转到首页（session 由服务器设置）
+            window.location.href = '/';
+        } else {
+            throw new Error(response.message || '登录失败');
+        }
+    } catch (error) {
+        errorDiv.textContent = error.message || '登录失败，请检查用户名和密码';
+        errorDiv.style.display = 'block';
+        loginBtn.disabled = false;
+        loginBtn.textContent = '登录';
+    }
+}
+    </script>
+</body>
+</html>

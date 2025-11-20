@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}用户管理 - 薪酬计算管理系统{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>用户管理</h2>
+    {% if can_edit %}
+    <button class="btn btn-primary" onclick="openUserModal()">+ 添加用户</button>
+    {% endif %}
+</div>
+
+<!-- 搜索和筛选栏 -->
+<div class="filter-bar">
+    <div class="search-box">
+        <input type="text" id="searchKeyword" placeholder="搜索用户名、姓名或工号..." class="input">
+        <button class="btn btn-secondary" onclick="searchUsers()">搜索</button>
+    </div>
+    <div class="filter-group">
+        <select id="filterStatus" class="select" onchange="loadUsers()">
+            <option value="">全部状态</option>
+            <option value="1">启用</option>
+            <option value="0">禁用</option>
+        </select>
+        <select id="filterDepartment" class="select" onchange="loadUsers()">
+            <option value="">全部部门</option>
+            <option value="综合部">综合部</option>
+            <option value="船务部">船务部</option>
+        </select>
+    </div>
+</div>
+
+<!-- 用户列表表格 -->
+<div class="table-container">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>用户名</th>
+                <th>姓名</th>
+                <th>工号</th>
+                <th>部门</th>
+                <th>职位</th>
+                <th>邮箱</th>
+                <th>手机</th>
+                <th>角色</th>
+                <th>状态</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="usersTableBody">
+            <tr>
+                <td colspan="11" class="text-center">加载中...</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- 分页 -->
+<div class="pagination" id="pagination"></div>
+
+<!-- 用户编辑/创建模态框 -->
+<div id="userModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">添加用户</h3>
+            <span class="close" onclick="closeUserModal()">&times;</span>
+        </div>
+        <form id="userForm" onsubmit="saveUser(event)">
+            <input type="hidden" id="userId">
+            
+            <div class="form-group">
+                <label for="username">用户名 *</label>
+                <input type="text" id="username" class="input" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">密码 <span id="passwordRequired">*</span></label>
+                <input type="password" id="password" class="input">
+                <small id="passwordHint">编辑用户时留空则不修改密码</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="realName">真实姓名 *</label>
+                <input type="text" id="realName" class="input" required>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="employeeId">工号</label>
+                    <input type="text" id="employeeId" class="input">
+                </div>
+                
+                <div class="form-group">
+                    <label for="role">角色（自动设置）</label>
+                    <input type="text" id="role" class="input" readonly style="background-color: #f5f5f5;">
+                    <small>角色由职位自动决定，不可手动修改</small>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="department">部门</label>
+                    <select id="department" class="input">
+                        <option value="">请选择部门</option>
+                        <option value="综合部">综合部</option>
+                        <option value="船务部">船务部</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="position">职位</label>
+                    <select id="position" class="input">
+                        <option value="">请选择职位</option>
+                        <option value="员工">员工</option>
+                        <option value="部长">部长</option>
+                        <option value="总经理">总经理</option>
+                    </select>
+                    <small>职位将自动决定用户角色：总经理→超级管理员，部长→管理员，员工→普通用户</small>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="email">邮箱</label>
+                    <input type="email" id="email" class="input">
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone">手机号</label>
+                    <input type="tel" id="phone" class="input">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="status">状态</label>
+                <select id="status" class="input">
+                    <option value="1">启用</option>
+                    <option value="0">禁用</option>
+                </select>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeUserModal()">取消</button>
+                <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 消息提示 -->
+<div id="messageToast" class="toast"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/users.js') }}"></script>
+<script>
+    window.userPermissions = {
+        canEdit: {{ 'true' if can_edit else 'false' }},
+        canDelete: {{ 'true' if can_delete else 'false' }},
+        userRole: '{{ user_role }}'
+    };
+</script>
+{% endblock %}
