@@ -7,7 +7,6 @@
 import hashlib
 import sys
 import os
-from datetime import datetime
 
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -17,34 +16,23 @@ from database import db
 class User:
     """用户模型类"""
     
-    # 职位到角色的映射
-    POSITION_ROLE_MAP = {
-        '总经理': 'super_admin',
-        '部长': 'admin',
-        '员工': 'user'
-    }
-    
     def __init__(self, username=None, password=None, real_name=None, 
-                 email=None, phone=None, department=None, position=None,
-                 employee_id=None, status=1, role=None, user_id=None):
+                 email=None, phone=None, department_id=None, position_id=None,
+                 employee_id=None, status=1, role='user', user_id=None,
+                 department_name=None, position_name=None):
         self.id = user_id
         self.username = username
         self.password = password
         self.real_name = real_name
         self.email = email
         self.phone = phone
-        self.department = department
-        self.position = position
+        self.department_id = department_id
+        self.position_id = position_id
         self.employee_id = employee_id
         self.status = status
-        
-        # 如果提供了职位但没有提供角色，根据职位自动设置角色
-        if position and not role:
-            self.role = self.POSITION_ROLE_MAP.get(position, 'user')
-        elif role:
-            self.role = role
-        else:
-            self.role = 'user'
+        self.role = role or 'user'
+        self.department = department_name
+        self.position = position_name
     
     @staticmethod
     def hash_password(password):
@@ -64,8 +52,10 @@ class User:
             'real_name': self.real_name,
             'email': self.email,
             'phone': self.phone,
-            'department': self.department,
-            'position': self.position,
+            'department_id': self.department_id,
+            'position_id': self.position_id,
+            'department': getattr(self, 'department', None),
+            'position': getattr(self, 'position', None),
             'employee_id': self.employee_id,
             'status': self.status,
             'role': self.role
@@ -76,38 +66,39 @@ class User:
     
     def save(self):
         """保存用户（新增或更新）"""
-        # 根据职位自动更新角色
-        if self.position:
-            mapped_role = self.POSITION_ROLE_MAP.get(self.position)
-            if mapped_role:
-                self.role = mapped_role
+        # 如果提供了position_id，根据职位更新角色
+        if self.position_id:
+            from models.position import Position
+            pos = Position.get_by_id(self.position_id)
+            if pos:
+                self.role = pos.role
         
         if self.id:
             # 更新
             sql = """
             UPDATE users SET 
                 username=%s, real_name=%s, email=%s, phone=%s,
-                department=%s, position=%s, employee_id=%s,
+                department_id=%s, position_id=%s, employee_id=%s,
                 status=%s, role=%s
             WHERE id=%s
             """
             params = (
                 self.username, self.real_name, self.email, self.phone,
-                self.department, self.position, self.employee_id,
+                self.department_id, self.position_id, self.employee_id,
                 self.status, self.role, self.id
             )
             if self.password:
                 sql = """
                 UPDATE users SET 
                     username=%s, password=%s, real_name=%s, email=%s, phone=%s,
-                    department=%s, position=%s, employee_id=%s,
+                    department_id=%s, position_id=%s, employee_id=%s,
                     status=%s, role=%s
                 WHERE id=%s
                 """
                 params = (
                     self.username, User.hash_password(self.password),
                     self.real_name, self.email, self.phone,
-                    self.department, self.position, self.employee_id,
+                    self.department_id, self.position_id, self.employee_id,
                     self.status, self.role, self.id
                 )
             db.execute_update(sql, params)
@@ -118,13 +109,13 @@ class User:
             
             sql = """
             INSERT INTO users 
-            (username, password, real_name, email, phone, department, position, employee_id, status, role)
+            (username, password, real_name, email, phone, department_id, position_id, employee_id, status, role)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             params = (
                 self.username, User.hash_password(self.password),
                 self.real_name, self.email, self.phone,
-                self.department, self.position, self.employee_id,
+                self.department_id, self.position_id, self.employee_id,
                 self.status, self.role
             )
             db.execute_update(sql, params)
@@ -135,8 +126,14 @@ class User:
     
     @staticmethod
     def get_by_id(user_id):
-        """根据ID获取用户"""
-        sql = "SELECT * FROM users WHERE id=%s"
+        """根据ID获取用户（带关联查询）"""
+        sql = """
+        SELECT u.*, d.name as department_name, p.name as position_name, p.role as position_role
+        FROM users u
+        LEFT JOIN departments d ON u.department_id = d.id
+        LEFT JOIN positions p ON u.position_id = p.id
+        WHERE u.id=%s
+        """
         result = db.execute_query(sql, (user_id,))
         if result:
             return User._from_dict(result[0])
@@ -144,8 +141,14 @@ class User:
     
     @staticmethod
     def get_by_username(username):
-        """根据用户名获取用户"""
-        sql = "SELECT * FROM users WHERE username=%s"
+        """根据用户名获取用户（带关联查询）"""
+        sql = """
+        SELECT u.*, d.name as department_name, p.name as position_name, p.role as position_role
+        FROM users u
+        LEFT JOIN departments d ON u.department_id = d.id
+        LEFT JOIN positions p ON u.position_id = p.id
+        WHERE u.username=%s
+        """
         result = db.execute_query(sql, (username,))
         if result:
             return User._from_dict(result[0])
@@ -153,38 +156,43 @@ class User:
     
     @staticmethod
     def get_by_employee_id(employee_id):
-        """根据工号获取用户"""
-        sql = "SELECT * FROM users WHERE employee_id=%s"
+        """根据工号获取用户（带关联查询）"""
+        sql = """
+        SELECT u.*, d.name as department_name, p.name as position_name, p.role as position_role
+        FROM users u
+        LEFT JOIN departments d ON u.department_id = d.id
+        LEFT JOIN positions p ON u.position_id = p.id
+        WHERE u.employee_id=%s
+        """
         result = db.execute_query(sql, (employee_id,))
         if result:
             return User._from_dict(result[0])
         return None
     
     @staticmethod
-    def get_all(page=1, page_size=20, status=None, department=None, keyword=None, user_department=None, user_role='user'):
-        """获取用户列表（分页，支持部门和角色过滤）"""
+    def get_all(page=1, page_size=20, status=None, department_id=None, keyword=None, user_department_id=None, user_role='user'):
+        """获取用户列表（分页，支持部门和角色过滤，带关联查询）"""
         where_clauses = []
         params = []
         
         if status is not None:
-            where_clauses.append("status=%s")
+            where_clauses.append("u.status=%s")
             params.append(status)
         
-        if department:
-            where_clauses.append("department=%s")
-            params.append(department)
+        if department_id:
+            where_clauses.append("u.department_id=%s")
+            params.append(department_id)
         
         if keyword:
-            where_clauses.append("(username LIKE %s OR real_name LIKE %s OR employee_id LIKE %s)")
+            where_clauses.append("(u.username LIKE %s OR u.real_name LIKE %s OR u.employee_id LIKE %s)")
             keyword_pattern = f"%{keyword}%"
             params.extend([keyword_pattern, keyword_pattern, keyword_pattern])
         
         # 基于部门的权限过滤：管理员和普通用户只能查看本部门的用户
-        # 如果用户没有部门（注册用户），则看不到任何用户
         if user_role in ['admin', 'user']:
-            if user_department:
-                where_clauses.append("department=%s")
-                params.append(user_department)
+            if user_department_id:
+                where_clauses.append("u.department_id=%s")
+                params.append(user_department_id)
             else:
                 # 没有部门的用户（注册用户）看不到任何用户
                 where_clauses.append("1=0")  # 永远不匹配任何记录
@@ -192,17 +200,25 @@ class User:
         where_sql = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
         
         # 获取总数
-        count_sql = f"SELECT COUNT(*) as total FROM users {where_sql}"
+        count_sql = f"""
+        SELECT COUNT(*) as total 
+        FROM users u {where_sql}
+        """
         total_result = db.execute_query(count_sql, params)
         total = total_result[0]['total'] if total_result else 0
         
         # 获取分页数据
         offset = (page - 1) * page_size
         sql = f"""
-        SELECT id, username, real_name, email, phone, department, position, 
-               employee_id, status, role, created_at, updated_at
-        FROM users {where_sql}
-        ORDER BY id DESC
+        SELECT u.id, u.username, u.real_name, u.email, u.phone, 
+               u.department_id, u.position_id, u.employee_id, u.status, u.role,
+               u.created_at, u.updated_at,
+               d.name as department_name, p.name as position_name, p.role as position_role
+        FROM users u
+        LEFT JOIN departments d ON u.department_id = d.id
+        LEFT JOIN positions p ON u.position_id = p.id
+        {where_sql}
+        ORDER BY u.id DESC
         LIMIT %s OFFSET %s
         """
         params.extend([page_size, offset])
@@ -225,17 +241,18 @@ class User:
     @staticmethod
     def _from_dict(data):
         """从字典创建用户对象"""
-        user = User(
+        return User(
             user_id=data.get('id'),
             username=data.get('username'),
             password=data.get('password'),
             real_name=data.get('real_name'),
             email=data.get('email'),
             phone=data.get('phone'),
-            department=data.get('department'),
-            position=data.get('position'),
+            department_id=data.get('department_id'),
+            position_id=data.get('position_id'),
             employee_id=data.get('employee_id'),
             status=data.get('status'),
-            role=data.get('role')
+            role=data.get('role') or data.get('position_role'),
+            department_name=data.get('department_name'),
+            position_name=data.get('position_name')
         )
-        return user

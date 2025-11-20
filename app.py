@@ -15,6 +15,8 @@ import secrets
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from models.user import User
+from models.department import Department
+from models.position import Position
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False  # 支持中文
@@ -152,15 +154,17 @@ def api_index():
             'GET /': '首页',
             'GET /users': '用户管理页面',
             'GET /api': 'API 信息',
-            'GET /api/users': '获取用户列表',
+            'GET /api/users': '获取用户列表（支持 status / department_id 筛选）',
             'GET /api/users/<id>': '获取用户详情',
-            'POST /api/users': '创建用户',
+            'POST /api/users': '创建用户（需 department_id、position_id）',
             'PUT /api/users/<id>': '更新用户',
             'DELETE /api/users/<id>': '删除用户（彻底删除，仅超级管理员）',
             'POST /api/users/<id>/disable': '停用用户（禁用登录）',
             'POST /api/users/<id>/enable': '启用用户（恢复登录）',
             'POST /api/users/login': '用户登录',
-            'GET /api/users/search': '搜索用户'
+            'GET /api/users/search': '搜索用户',
+            'GET /api/departments': '获取部门列表',
+            'GET /api/positions': '获取职位列表'
         }
     })
 
@@ -173,7 +177,7 @@ def get_users():
         page = int(request.args.get('page', 1))
         page_size = int(request.args.get('page_size', 20))
         status = request.args.get('status')
-        department = request.args.get('department')
+        department_id = request.args.get('department_id', type=int)
         keyword = request.args.get('keyword')
         
         if status is not None:
@@ -181,16 +185,16 @@ def get_users():
         
         # 获取当前用户的部门和角色（用于权限过滤）
         current_user = User.get_by_id(session.get('user_id'))
-        user_department = current_user.department if current_user else None
+        user_department_id = current_user.department_id if current_user else None
         user_role = session.get('role', 'user')
         
         result = User.get_all(
             page=page,
             page_size=page_size,
             status=status,
-            department=department,
+            department_id=department_id,
             keyword=keyword,
-            user_department=user_department,
+            user_department_id=user_department_id,
             user_role=user_role
         )
         
@@ -229,13 +233,12 @@ def get_user(user_id):
         current_user = User.get_by_id(session.get('user_id'))
         user_role = session.get('role', 'user')
         if user_role != 'super_admin' and current_user:
-            # 如果当前用户没有部门（注册用户），则不能查看任何用户
-            if not current_user.department:
+            if not current_user.department_id:
                 return jsonify({
                     'success': False,
                     'message': '您还没有被分配部门，请联系管理员'
                 }), 403
-            if user.department != current_user.department:
+            if user.department_id != current_user.department_id:
                 return jsonify({
                     'success': False,
                     'message': '您只能查看本部门的用户信息'
@@ -338,6 +341,39 @@ def create_user():
                 'message': '工号已存在'
             }), 400
         
+        # 处理部门、职位
+        department_id = data.get('department_id')
+        position_id = data.get('position_id')
+        
+        if department_id is None or position_id is None:
+            return jsonify({
+                'success': False,
+                'message': '请提供有效的部门和职位'
+            }), 400
+        
+        try:
+            department_id = int(department_id)
+            position_id = int(position_id)
+        except (TypeError, ValueError):
+            return jsonify({
+                'success': False,
+                'message': '部门或职位格式不正确'
+            }), 400
+        
+        department = Department.get_by_id(department_id)
+        if not department:
+            return jsonify({
+                'success': False,
+                'message': '部门不存在'
+            }), 400
+        
+        position = Position.get_by_id(position_id)
+        if not position:
+            return jsonify({
+                'success': False,
+                'message': '职位不存在'
+            }), 400
+        
         # 创建用户（根据职位自动设置角色）
         user = User(
             username=data['username'],
@@ -345,8 +381,8 @@ def create_user():
             real_name=data['real_name'],
             email=data.get('email'),
             phone=data.get('phone'),
-            department=data.get('department'),
-            position=data.get('position'),
+            department_id=department_id,
+            position_id=position_id,
             employee_id=data.get('employee_id'),
             status=data.get('status', 1),
             role=None  # 角色会根据职位自动设置
@@ -388,7 +424,7 @@ def update_user(user_id):
         current_user = User.get_by_id(session.get('user_id'))
         user_role = session.get('role', 'user')
         if user_role == 'admin' and current_user:
-            if user.department != current_user.department:
+            if user.department_id != current_user.department_id:
                 return jsonify({
                     'success': False,
                     'message': '您只能修改本部门的用户'
@@ -403,16 +439,40 @@ def update_user(user_id):
             user.email = data['email']
         if 'phone' in data:
             user.phone = data['phone']
-        if 'department' in data:
-            # 权限检查：部长不能修改部门
+        if 'department_id' in data:
             if user_role == 'admin':
                 return jsonify({
                     'success': False,
                     'message': '您没有权限修改部门'
                 }), 403
-            user.department = data['department']
-        if 'position' in data:
-            user.position = data['position']
+            try:
+                new_department_id = int(data['department_id'])
+            except (TypeError, ValueError):
+                return jsonify({
+                    'success': False,
+                    'message': '部门参数不正确'
+                }), 400
+            if not Department.get_by_id(new_department_id):
+                return jsonify({
+                    'success': False,
+                    'message': '部门不存在'
+                }), 400
+            user.department_id = new_department_id
+        
+        if 'position_id' in data:
+            try:
+                new_position_id = int(data['position_id'])
+            except (TypeError, ValueError):
+                return jsonify({
+                    'success': False,
+                    'message': '职位参数不正确'
+                }), 400
+            if not Position.get_by_id(new_position_id):
+                return jsonify({
+                    'success': False,
+                    'message': '职位不存在'
+                }), 400
+            user.position_id = new_position_id
             # 职位改变时，角色会自动更新
         if 'employee_id' in data:
             # 检查工号是否已被其他用户使用
@@ -493,12 +553,12 @@ def disable_user(user_id):
         
         # 管理员只能停用本部门用户
         if user_role == 'admin':
-            if not current_user or not current_user.department:
+            if not current_user or not current_user.department_id:
                 return jsonify({
                     'success': False,
                     'message': '您还没有被分配部门，无法执行此操作'
                 }), 403
-            if user.department != current_user.department:
+            if user.department_id != current_user.department_id:
                 return jsonify({
                     'success': False,
                     'message': '您只能停用本部门的用户'
@@ -544,12 +604,12 @@ def enable_user(user_id):
         
         # 管理员只能启用本部门用户
         if user_role == 'admin':
-            if not current_user or not current_user.department:
+            if not current_user or not current_user.department_id:
                 return jsonify({
                     'success': False,
                     'message': '您还没有被分配部门，无法执行此操作'
                 }), 403
-            if user.department != current_user.department:
+            if user.department_id != current_user.department_id:
                 return jsonify({
                     'success': False,
                     'message': '您只能启用本部门的用户'
@@ -664,13 +724,13 @@ def search_users():
         
         # 获取当前用户的部门和角色（用于权限过滤）
         current_user = User.get_by_id(session.get('user_id'))
-        user_department = current_user.department if current_user else None
+        user_department_id = current_user.department_id if current_user else None
         user_role = session.get('role', 'user')
         
         result = User.get_all(
             keyword=keyword, 
             page_size=50,
-            user_department=user_department,
+            user_department_id=user_department_id,
             user_role=user_role
         )
         
@@ -686,6 +746,49 @@ def search_users():
         return jsonify({
             'success': False,
             'message': f'搜索失败: {str(e)}'
+        }), 500
+
+
+# 部门和职位管理API
+@app.route('/api/departments', methods=['GET'])
+@permission_required('view')
+def get_departments():
+    """获取所有部门列表"""
+    try:
+        status = request.args.get('status')
+        status = int(status) if status is not None else None
+        
+        departments = Department.get_all(status=status)
+        
+        return jsonify({
+            'success': True,
+            'data': [dept.to_dict() for dept in departments]
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'获取部门列表失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/positions', methods=['GET'])
+@permission_required('view')
+def get_positions():
+    """获取所有职位列表"""
+    try:
+        status = request.args.get('status')
+        status = int(status) if status is not None else None
+        
+        positions = Position.get_all(status=status)
+        
+        return jsonify({
+            'success': True,
+            'data': [pos.to_dict() for pos in positions]
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'获取职位列表失败: {str(e)}'
         }), 500
 
 

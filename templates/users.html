@@ -24,15 +24,45 @@
         </select>
         <select id="filterDepartment" class="select" onchange="loadUsers()">
             <option value="">全部部门</option>
-            <option value="综合部">综合部</option>
-            <option value="船务部">船务部</option>
+            <!-- 部门选项由 JavaScript 动态加载 -->
         </select>
+    </div>
+</div>
+
+<!-- 样式调节 -->
+<div class="table-style-toggle">
+    <button type="button" class="btn btn-secondary btn-sm" id="toggleTableStyleBtn">
+        表格样式
+    </button>
+    <div class="table-style-panel" id="tableStylePanel">
+        <div class="gradient-controls">
+            <label>表头渐变</label>
+            <div class="color-pickers">
+                <input type="color" id="headerGradientStart" class="color-input" aria-label="表头渐变起始颜色">
+                <span class="color-arrow">→</span>
+                <input type="color" id="headerGradientEnd" class="color-input" aria-label="表头渐变结束颜色">
+            </div>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="resetTableStyleBtn">重置样式</button>
     </div>
 </div>
 
 <!-- 用户列表表格 -->
 <div class="table-container">
-    <table class="data-table">
+    <table class="data-table" id="usersTable">
+        <colgroup id="userTableColGroup">
+            <col>
+            <col>
+            <col>
+            <col>
+            <col>
+            <col>
+            <col>
+            <col>
+            <col>
+            <col>
+            <col>
+        </colgroup>
         <thead>
             <tr>
                 <th>ID</th>
@@ -103,8 +133,7 @@
                     <label for="department">部门</label>
                     <select id="department" class="input">
                         <option value="">请选择部门</option>
-                        <option value="综合部">综合部</option>
-                        <option value="船务部">船务部</option>
+                        <!-- 部门选项由 JavaScript 动态加载 -->
                     </select>
                 </div>
                 
@@ -112,11 +141,9 @@
                     <label for="position">职位</label>
                     <select id="position" class="input">
                         <option value="">请选择职位</option>
-                        <option value="员工">员工</option>
-                        <option value="部长">部长</option>
-                        <option value="总经理">总经理</option>
+                        <!-- 职位选项由 JavaScript 动态加载 -->
                     </select>
-                    <small>职位将自动决定用户角色：总经理→超级管理员，部长→管理员，员工→普通用户</small>
+                    <small>职位将自动决定用户角色（由基础职位表配置）</small>
                 </div>
             </div>
             
@@ -153,7 +180,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/users.js') }}"></script>
+<script src="{{ url_for('static', filename='js/users.js') }}?v=20241120"></script>
 <script>
     window.userPermissions = {
         canEdit: {{ 'true' if can_edit else 'false' }},

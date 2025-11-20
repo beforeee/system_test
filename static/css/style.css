@@ -1,4 +1,10 @@
 /* 全局样式 */
+:root {
+    --table-header-gradient-start: #667eea;
+    --table-header-gradient-end: #764ba2;
+    --table-header-text-color: #ffffff;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -238,17 +244,20 @@ body {
 .data-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 .data-table thead {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: linear-gradient(135deg, var(--table-header-gradient-start), var(--table-header-gradient-end));
+    color: var(--table-header-text-color);
 }
 
 .data-table th {
     padding: 1rem;
     text-align: left;
     font-weight: 600;
+    position: relative;
+    user-select: none;
 }
 
 .data-table td {
@@ -262,6 +271,33 @@ body {
 
 .data-table tbody tr:last-child td {
     border-bottom: none;
+}
+
+.resize-handle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    background-color: transparent;
+}
+
+.resize-handle::after {
+    content: '';
+    position: absolute;
+    top: 25%;
+    bottom: 25%;
+    width: 2px;
+    left: 2px;
+    background-color: rgba(255, 255, 255, 0.4);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.resize-handle:hover::after,
+.resize-handle.active::after {
+    opacity: 1;
 }
 
 .text-center {
@@ -354,6 +390,61 @@ body {
 .pagination .page-info {
     padding: 0 1rem;
     color: #666;
+}
+
+/* 表格样式调节 */
+.table-style-toggle {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.5rem;
+    position: relative;
+    z-index: 10;
+}
+
+.table-style-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: white;
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    display: none;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 220px;
+}
+
+.table-style-panel.show {
+    display: flex;
+}
+
+.gradient-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    color: #555;
+}
+
+.color-pickers {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.color-input {
+    width: 40px;
+    height: 32px;
+    border: none;
+    padding: 0;
+    background: none;
+    cursor: pointer;
+}
+
+.color-arrow {
+    font-size: 1.2rem;
+    color: #999;
 }
 
 /* 模态框 */

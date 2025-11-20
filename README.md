@@ -97,6 +97,16 @@ python3 app.py
 
 应用将在 `http://localhost:5000` 启动
 
+### 5. （可选）导入示例数据
+
+在空库环境下，可以运行脚本快速创建基础账号：
+
+```bash
+python3 create_test_users.py
+```
+
+脚本会自动确保示例部门、职位存在，并写入若干测试用户。
+
 ## API 接口文档
 
 ### 基础信息
@@ -111,15 +121,15 @@ python3 app.py
 - **URL**: `GET /api/users`
 - **参数**:
   - `page` (可选): 页码，默认 1
-  - `page_size` (可选): 每页数量，默认 20
-  - `status` (可选): 状态筛选，1-启用，0-禁用
-  - `department` (可选): 部门筛选
-  - `keyword` (可选): 关键词搜索（用户名、姓名、工号）
+- `page_size` (可选): 每页数量，默认 20
+- `status` (可选): 状态筛选，1-启用，0-禁用
+- `department_id` (可选): 部门 ID 筛选
+- `keyword` (可选): 关键词搜索（用户名、姓名、工号）
 
 **示例**:
 ```bash
 curl http://localhost:5000/api/users?page=1&page_size=10
-curl http://localhost:5000/api/users?department=技术部
+curl http://localhost:5000/api/users?department_id=1
 curl http://localhost:5000/api/users?keyword=张三
 ```
 
@@ -135,11 +145,13 @@ curl http://localhost:5000/api/users?keyword=张三
         "real_name": "张三",
         "email": "zhangsan@example.com",
         "phone": "13800138000",
+        "department_id": 1,
         "department": "技术部",
-        "position": "工程师",
+        "position_id": 2,
+        "position": "部长",
         "employee_id": "E001",
         "status": 1,
-        "role": "employee"
+        "role": "admin"
       }
     ],
     "pagination": {
@@ -168,15 +180,14 @@ curl http://localhost:5000/api/users?keyword=张三
   "real_name": "张三",
   "email": "zhangsan@example.com",
   "phone": "13800138000",
-  "department": "技术部",
-  "position": "工程师",
+  "department_id": 1,
+  "position_id": 2,
   "employee_id": "E001",
-  "status": 1,
-  "role": "employee"
+  "status": 1
 }
 ```
 
-**必需字段**: `username`, `password`, `real_name`
+**必需字段**: `username`, `password`, `real_name`, `department_id`, `position_id`
 
 #### 4. 更新用户
 
@@ -216,11 +227,34 @@ curl http://localhost:5000/api/users?keyword=张三
 | real_name | VARCHAR(50) | 真实姓名 |
 | email | VARCHAR(100) | 邮箱 |
 | phone | VARCHAR(20) | 手机号 |
-| department | VARCHAR(100) | 部门 |
-| position | VARCHAR(100) | 职位 |
+| department_id | INT | 部门 ID（外键） |
+| position_id | INT | 职位 ID（外键） |
 | employee_id | VARCHAR(50) | 工号（唯一） |
 | status | TINYINT | 状态：1-启用，0-禁用 |
-| role | VARCHAR(20) | 角色：admin-管理员，employee-员工 |
+| role | VARCHAR(20) | 角色：super_admin / admin / user |
+| created_at | DATETIME | 创建时间 |
+| updated_at | DATETIME | 更新时间 |
+
+### departments 表
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INT | 主键，自增 |
+| name | VARCHAR(100) | 部门名称（唯一） |
+| description | VARCHAR(255) | 描述 |
+| status | TINYINT | 状态：1-启用，0-禁用 |
+| created_at | DATETIME | 创建时间 |
+| updated_at | DATETIME | 更新时间 |
+
+### positions 表
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INT | 主键，自增 |
+| name | VARCHAR(100) | 职位名称（唯一） |
+| role | VARCHAR(20) | 对应角色（super_admin / admin / user） |
+| description | VARCHAR(255) | 描述 |
+| status | TINYINT | 状态：1-启用，0-禁用 |
 | created_at | DATETIME | 创建时间 |
 | updated_at | DATETIME | 更新时间 |
 
@@ -239,8 +273,8 @@ user_data = {
     "password": "123456",
     "real_name": "测试用户",
     "email": "test@example.com",
-    "department": "技术部",
-    "position": "工程师",
+    "department_id": 1,
+    "position_id": 2,
     "employee_id": "E001"
 }
 response = requests.post(f"{base_url}/api/users", json=user_data)
@@ -270,7 +304,8 @@ curl -X POST http://localhost:5000/api/users \
     "password": "123456",
     "real_name": "测试用户",
     "email": "test@example.com",
-    "department": "技术部"
+    "department_id": 1,
+    "position_id": 2
   }'
 
 # 获取用户列表
