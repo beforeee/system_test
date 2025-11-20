@@ -26,8 +26,12 @@ function getActionButtons(user) {
         buttons += `<button class="btn btn-primary btn-sm" onclick="editUser(${user.id})">编辑</button>`;
     }
     
-    if (canDisable && user.status === 1 && user.id !== currentUserId) {
-        buttons += `<button class="btn btn-warning btn-sm" onclick="disableUser(${user.id})">停用</button>`;
+    if (canDisable && user.id !== currentUserId) {
+        if (user.status === 1) {
+            buttons += `<button class="btn btn-warning btn-sm" onclick="disableUser(${user.id})">停用</button>`;
+        } else {
+            buttons += `<button class="btn btn-success btn-sm" onclick="enableUser(${user.id})">启用</button>`;
+        }
     }
     
     if (canDelete && user.id !== currentUserId) {
@@ -369,6 +373,24 @@ async function disableUser(userId) {
         }
     } catch (error) {
         showToast('停用失败: ' + error.message, 'error');
+    }
+}
+
+async function enableUser(userId) {
+    if (!confirm('确定要启用这个用户吗？')) {
+        return;
+    }
+    
+    try {
+        const response = await apiPost(`/api/users/${userId}/enable`, {});
+        if (response.success) {
+            showToast('用户已启用', 'success');
+            loadUsers();
+        } else {
+            showToast('启用失败: ' + response.message, 'error');
+        }
+    } catch (error) {
+        showToast('启用失败: ' + error.message, 'error');
     }
 }
 

@@ -157,6 +157,8 @@ def api_index():
             'POST /api/users': '创建用户',
             'PUT /api/users/<id>': '更新用户',
             'DELETE /api/users/<id>': '删除用户（彻底删除，仅超级管理员）',
+            'POST /api/users/<id>/disable': '停用用户（禁用登录）',
+            'POST /api/users/<id>/enable': '启用用户（恢复登录）',
             'POST /api/users/login': '用户登录',
             'GET /api/users/search': '搜索用户'
         }
@@ -522,6 +524,56 @@ def disable_user(user_id):
         return jsonify({
             'success': False,
             'message': f'停用用户失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/users/<int:user_id>/enable', methods=['POST'])
+@permission_required('admin')
+def enable_user(user_id):
+    """启用用户（恢复为可登录状态）"""
+    try:
+        user = User.get_by_id(user_id)
+        if not user:
+            return jsonify({
+                'success': False,
+                'message': '用户不存在'
+            }), 404
+        
+        current_user = User.get_by_id(session.get('user_id'))
+        user_role = session.get('role', 'user')
+        
+        # 管理员只能启用本部门用户
+        if user_role == 'admin':
+            if not current_user or not current_user.department:
+                return jsonify({
+                    'success': False,
+                    'message': '您还没有被分配部门，无法执行此操作'
+                }), 403
+            if user.department != current_user.department:
+                return jsonify({
+                    'success': False,
+                    'message': '您只能启用本部门的用户'
+                }), 403
+        
+        if user.status == 1:
+            return jsonify({
+                'success': False,
+                'message': '该用户已是启用状态'
+            }), 400
+        
+        user.status = 1
+        user.password = None  # 避免更新密码字段
+        user.save()
+        
+        return jsonify({
+            'success': True,
+            'message': '用户已启用'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'启用用户失败: {str(e)}'
         }), 500
 
 
